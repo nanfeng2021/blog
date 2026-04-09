@@ -1,87 +1,72 @@
 <script setup>
-import { onMounted, watch } from 'vue'
+import { onMounted, watch, ref } from 'vue'
 import { useRoute } from 'vitepress'
 
 const route = useRoute()
+const utterancesLoaded = ref(false)
 
-// Giscus 配置
-const giscusConfig = {
-  src: 'https://giscus.app/client.js',
-  'data-repo': 'nanfeng2021/ai-learning-journey',
-  'data-repo-id': 'R_kgDORxSaKw',
-  'data-category': 'General',
-  'data-category-id': 'DIC_kwDORxSaK84C53CU',
-  'data-mapping': 'pathname',
-  'data-strict': '0',
-  'data-reactions-enabled': '1',
-  'data-emit-metadata': '0',
-  'data-input-position': 'bottom',
-  'data-theme': 'preferred_color_scheme',
-  'data-lang': 'zh-CN',
-  crossorigin: 'anonymous',
-  async: true
-}
-
-// 加载 Giscus 脚本
-const loadGiscus = () => {
-  // 移除已存在的脚本和 iframe
-  const existingScript = document.querySelector('script[src*="giscus.app"]')
-  const existingIframe = document.querySelector('iframe.giscus-frame')
-  
-  if (existingScript) existingScript.remove()
-  if (existingIframe) existingIframe.remove()
-  
-  // 创建新脚本
-  const script = document.createElement('script')
-  Object.entries(giscusConfig).forEach(([key, value]) => {
-    if (value === true) {
-      script.setAttribute(key, '')
-    } else {
-      script.setAttribute(key, value)
-    }
-  })
-  
-  // 添加到页面
-  const container = document.getElementById('giscus-container')
-  if (container) {
-    container.appendChild(script)
-  }
-}
-
-// 页面挂载时加载
 onMounted(() => {
-  // 只在文章页面加载
   if (route.path.startsWith('/posts/')) {
-    // 等待 DOM 渲染
-    setTimeout(loadGiscus, 100)
+    setTimeout(loadUtterances, 300)
   }
 })
 
-// 路由变化时重新加载
-watch(
-  () => route.path,
-  () => {
-    if (route.path.startsWith('/posts/')) {
-      setTimeout(loadGiscus, 100)
-    }
+watch(() => route.path, () => {
+  utterancesLoaded.value = false
+  if (route.path.startsWith('/posts/')) {
+    setTimeout(loadUtterances, 300)
   }
-)
+})
+
+const loadUtterances = () => {
+  if (utterancesLoaded.value) return
+  
+  const container = document.getElementById('utterances-container')
+  if (!container) return
+  
+  // 清理旧的
+  container.innerHTML = ''
+  
+  // 创建 script
+  const script = document.createElement('script')
+  script.src = 'https://utteranc.es/client.js'
+  script.setAttribute('repo', 'nanfeng2021/ai-learning-journey')
+  script.setAttribute('issue-term', 'pathname')
+  script.setAttribute('theme', 'github-light')
+  script.setAttribute('crossorigin', 'anonymous')
+  script.async = true
+  
+  container.appendChild(script)
+  utterancesLoaded.value = true
+}
 </script>
 
 <template>
-  <div v-if="route.path.startsWith('/posts/')" class="giscus-wrapper">
-    <div id="giscus-container"></div>
+  <div class="comments-section">
+    <h3 class="comments-title">💬 评论</h3>
+    <div id="utterances-container"></div>
   </div>
 </template>
 
 <style scoped>
-.giscus-wrapper {
+.comments-section {
   margin-top: 3rem;
   padding-top: 2rem;
   border-top: 1px solid var(--vp-c-divider);
 }
 
-html.dark .giscus-wrapper {
+.comments-title {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--vp-c-text-1);
+  margin-bottom: 1.5rem;
+}
+
+html.dark .comments-section {
   border-top-color: var(--vp-c-divider-dark);
+}
+
+#utterances-container {
+  min-height: 200px;
 }
 </style>
