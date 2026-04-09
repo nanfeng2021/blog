@@ -86,6 +86,8 @@ export default defineConfig({
       { text: '首页', link: '/' },
       { text: '文章', link: '/posts/' },
       { text: '🤖 RAG 知识库', link: '/rag' },
+      { text: '🧠 情感分析', link: '/emotion' },
+      { text: '🎮 AI 方块', link: '/tetris' },
       { text: '关于', link: '/about' }
     ],
 

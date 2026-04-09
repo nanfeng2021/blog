@@ -1,6 +1,6 @@
 #!/bin/bash
 # 南风博客 - 一键启动所有服务
-# 包括：博客服务 + RAG 知识库服务
+# 包括：博客服务 + RAG 知识库 + 情感分析 + AI 俄罗斯方块
 
 echo "============================================================"
 echo "🚀 南风博客 - 一键启动所有服务"
@@ -9,6 +9,8 @@ echo ""
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 RAG_DIR="/root/.openclaw/workspace/rag-knowledge-base"
+EMOTION_DIR="/root/.openclaw/workspace/emotion-analyzer-mvp"
+TETRIS_DIR="/root/.openclaw/workspace/ai-tetris"
 
 # 检查并启动 RAG 服务
 echo "📊 检查 RAG 知识库服务..."
@@ -31,13 +33,53 @@ fi
 
 echo ""
 
+# 检查并启动情感分析服务
+echo "🧠 检查情感分析服务..."
+if ! curl -s http://localhost:8001/health > /dev/null 2>&1; then
+    echo "   ⚠️  情感分析服务未运行，正在启动..."
+    
+    if [ -d "$EMOTION_DIR" ] && [ -f "$EMOTION_DIR/docker-compose.yml" ]; then
+        cd "$EMOTION_DIR"
+        docker-compose up -d
+        echo "   ✓ 情感分析服务已启动 (端口：8001)"
+    else
+        echo "   ❌ 情感分析目录或 docker-compose.yml 不存在"
+    fi
+else
+    echo "   ✓ 情感分析服务已在运行 (端口：8001)"
+fi
+
+echo ""
+
+# 检查并启动俄罗斯方块服务
+echo "🎮 检查 AI 俄罗斯方块服务..."
+if ! curl -s http://localhost:5000/health > /dev/null 2>&1; then
+    echo "   ⚠️  俄罗斯方块服务未运行，正在启动..."
+    
+    if [ -d "$TETRIS_DIR" ] && [ -f "$TETRIS_DIR/docker-compose.yml" ]; then
+        cd "$TETRIS_DIR"
+        docker-compose up -d
+        echo "   ✓ 俄罗斯方块服务已启动 (端口：5000)"
+    else
+        echo "   ❌ 俄罗斯方块目录或 docker-compose.yml 不存在"
+    fi
+else
+    echo "   ✓ 俄罗斯方块服务已在运行 (端口：5000)"
+fi
+
+echo ""
+
 # 启动博客服务
 echo "📝 启动博客服务..."
 cd "$SCRIPT_DIR"
 
 if [ -d "node_modules" ]; then
     echo "   🌐 博客地址：http://localhost:5173"
-    echo "   💡 按 Ctrl+C 停止服务"
+    echo "   🤖 RAG 知识库：http://localhost:7860"
+    echo "   🧠 情感分析：http://localhost:8001"
+    echo "   🎮 AI 俄罗斯方块：http://localhost:5000"
+    echo ""
+    echo "   💡 按 Ctrl+C 停止博客服务"
     echo "============================================================"
     echo ""
     
