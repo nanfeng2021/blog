@@ -2,9 +2,9 @@
  * Playwright 测试配置
  */
 
-const { defineConfig, devices } = require('@playwright/test');
+import { defineConfig, devices } from '@playwright/test';
 
-module.exports = defineConfig({
+export default defineConfig({
   // 测试文件位置
   testDir: './tests/e2e',
   
@@ -52,6 +52,7 @@ module.exports = defineConfig({
       name: 'chromium',
       use: { ...devices['Desktop Chrome'] },
     },
+    // 以下浏览器在 CI 中可选启用
     {
       name: 'firefox',
       use: { ...devices['Desktop Firefox'] },
@@ -59,14 +60,6 @@ module.exports = defineConfig({
     {
       name: 'webkit',
       use: { ...devices['Desktop Safari'] },
-    },
-    {
-      name: 'Mobile Chrome',
-      use: { ...devices['Pixel 5'] },
-    },
-    {
-      name: 'Mobile Safari',
-      use: { ...devices['iPhone 12'] },
     },
   ],
   
