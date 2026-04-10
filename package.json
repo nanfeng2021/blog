@@ -1,23 +1,37 @@
 {
   "name": "blog",
   "version": "1.0.0",
-  "description": "南风的个人博客",
+  "description": "南风的个人博客 - 专注于 AI 技术、编程实践与生活感悟",
   "type": "module",
   "main": "index.js",
   "scripts": {
     "dev": "vitepress dev docs",
     "build": "vitepress build docs",
-    "preview": "vitepress preview docs"
+    "preview": "vitepress preview docs",
+    "test": "playwright test",
+    "test:ui": "playwright test --ui",
+    "test:debug": "playwright test --debug",
+    "lint": "node -e \"JSON.parse(require('fs').readFileSync('package.json'))\" && echo '✅ package.json is valid'",
+    "docker:build": "docker build -t nanfeng2021/ainanfeng-blog .",
+    "docker:run": "docker run -d --name nanfeng-blog -p 8080:80 nanfeng2021/ainanfeng-blog",
+    "docker:stop": "docker stop nanfeng-blog && docker rm nanfeng-blog"
   },
   "keywords": [
     "blog",
-    "vitepress"
+    "vitepress",
+    "AI",
+    "nanfeng"
   ],
   "author": "南风",
   "license": "MIT",
   "devDependencies": {
+    "@playwright/test": "^1.42.0",
     "canvas": "^3.2.3",
     "vitepress": "^1.6.4",
     "vue": "^3.5.31"
+  },
+  "engines": {
+    "node": ">=20.0.0",
+    "npm": ">=9.0.0"
   }
 }

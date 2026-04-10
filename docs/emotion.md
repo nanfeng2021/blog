@@ -19,17 +19,27 @@ onMounted(() => {
 
 async function checkService() {
   try {
-    const response = await fetch('http://localhost:8001/health', { method: 'GET' })
-    if (response.ok) {
-      serviceLoaded.value = true
-      serviceStatus.value = 'running'
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 3000);
+    
+    const response = await fetch('http://localhost:8001/health', { 
+      method: 'GET',
+      signal: controller.signal,
+      mode: 'no-cors'
+    });
+    
+    clearTimeout(timeoutId);
+    
+    if (response.ok || response.type === 'opaque') {
+      serviceLoaded.value = true;
+      serviceStatus.value = 'running';
     } else {
-      serviceStatus.value = 'error'
+      serviceStatus.value = 'error';
     }
   } catch (error) {
-    serviceStatus.value = 'offline'
+    serviceStatus.value = 'offline';
   }
-  isLoading.value = false
+  isLoading.value = false;
 }
 
 function openInNewTab() {

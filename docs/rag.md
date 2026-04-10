@@ -19,14 +19,28 @@ onMounted(() => {
 
 async function checkRagService() {
   try {
-    const response = await fetch('http://localhost:7860', { method: 'HEAD' })
-    if (response.ok) {
-      iframeLoaded.value = true
-      isLoading.value = false
+    // 使用 GET 请求并设置超时
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 3000);
+    
+    const response = await fetch('http://localhost:7860', { 
+      method: 'GET',
+      signal: controller.signal,
+      mode: 'no-cors' // 允许跨域访问本地服务
+    });
+    
+    clearTimeout(timeoutId);
+    
+    // no-cors 模式下 opaque 响应也认为是成功
+    if (response.ok || response.type === 'opaque') {
+      iframeLoaded.value = true;
+      isLoading.value = false;
+    } else {
+      throw new Error('服务响应异常');
     }
   } catch (error) {
-    console.log('RAG 服务未启动或无法访问')
-    isLoading.value = false
+    console.log('RAG 服务未启动或无法访问:', error.message);
+    isLoading.value = false;
   }
 }
 

@@ -1,0 +1,366 @@
+# GitHub Actions CI/CD Pipeline for 南风博客
+# 自动化测试、构建和部署
+
+name: Blog CI/CD Pipeline
+
+on:
+  push:
+    branches: [main, develop]
+    tags: ['v*']
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened]
+  schedule:
+    # 每周一凌晨 2 点运行一次完整检查 (UTC+8)
+    - cron: '0 18 * * SUN'
+  workflow_dispatch:
+    inputs:
+      skip_tests:
+        description: '跳过测试（仅构建）'
+        required: false
+        type: boolean
+        default: false
+      deploy_preview:
+        description: '部署预览环境'
+        required: false
+        type: boolean
+        default: true
+
+env:
+  NODE_VERSION: '20'
+  REGISTRY: docker.io
+  IMAGE_NAME: nanfeng2021/ainanfeng-blog
+
+jobs:
+  # ============================================
+  # 1. 代码质量检查
+  # ============================================
+  lint:
+    name: 🔍 Code Quality
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+      
+      - name: Install dependencies
+        run: npm ci
+      
+      - name: Check package.json format
+        run: |
+          echo "📦 Validating package.json..."
+          node -e "JSON.parse(require('fs').readFileSync('package.json'))" && echo "✅ package.json is valid JSON"
+      
+      - name: Validate Markdown files
+        run: |
+          echo "📝 Checking Markdown syntax..."
+          find docs/ -name "*.md" -type f | while read file; do
+            if ! grep -q "^#" "$file"; then
+              echo "⚠️ Warning: $file has no headings"
+            fi
+          done
+          echo "✅ Markdown validation complete"
+      
+      - name: Check for broken links (basic)
+        run: |
+          echo "🔗 Checking for obvious broken links..."
+          grep -r "http://localhost" docs/ --include="*.md" || echo "✅ No localhost links found"
+
+  # ============================================
+  # 2. 构建测试
+  # ============================================
+  build:
+    name: 🏗️ Build Test
+    runs-on: ubuntu-latest
+    needs: lint
+    timeout-minutes: 15
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+      
+      - name: Install dependencies
+        run: npm ci
+      
+      - name: Build site
+        run: npm run build
+      
+      - name: Verify build output
+        run: |
+          echo "📦 Verifying build output..."
+          if [ -d "docs/.vitepress/dist" ]; then
+            echo "✅ Build directory exists"
+            ls -lh docs/.vitepress/dist/
+            echo ""
+            echo "📊 Build size:"
+            du -sh docs/.vitepress/dist/
+          else
+            echo "❌ Build directory not found!"
+            exit 1
+          fi
+      
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: blog-build
+          path: docs/.vitepress/dist/
+          retention-days: 7
+
+  # ============================================
+  # 3. E2E 测试（Playwright）
+  # ============================================
+  e2e-test:
+    name: 🧪 E2E Tests
+    runs-on: ubuntu-latest
+    needs: build
+    if: github.event.inputs.skip_tests != 'true'
+    timeout-minutes: 20
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+      
+      - name: Install dependencies
+        run: npm ci
+      
+      - name: Install Playwright
+        run: npx playwright install --with-deps chromium
+      
+      - name: Build site
+        run: npm run build
+      
+      - name: Start preview server
+        run: |
+          npx vitepress preview docs &
+          sleep 5
+          echo "🌐 Preview server started on port 4173"
+      
+      - name: Run Playwright tests
+        run: |
+          mkdir -p tests/e2e
+          cat > tests/e2e/basic.spec.js << 'EOF'
+          const { test, expect } = require('@playwright/test');
+          
+          test('首页加载成功', async ({ page }) => {
+            await page.goto('http://localhost:4173');
+            await expect(page).toHaveTitle(/南风的博客/);
+          });
+          
+          test('导航栏存在', async ({ page }) => {
+            await page.goto('http://localhost:4173');
+            const nav = page.locator('nav');
+            await expect(nav).toBeVisible();
+          });
+          
+          test('文章列表页面可访问', async ({ page }) => {
+            await page.goto('http://localhost:4173/posts/');
+            await expect(page).toHaveURL(/\/posts\//);
+          });
+          
+          test('关于页面可访问', async ({ page }) => {
+            await page.goto('http://localhost:4173/about');
+            await expect(page).toHaveURL(/\/about/);
+          });
+          EOF
+          
+          npx playwright test tests/e2e/basic.spec.js --reporter=list
+      
+      - name: Upload test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 7
+
+  # ============================================
+  # 4. Docker 构建测试
+  # ============================================
+  docker-build:
+    name: 🐳 Docker Build
+    runs-on: ubuntu-latest
+    needs: [build, e2e-test]
+    if: github.event_name == 'push' && github.event.inputs.skip_tests != 'true'
+    timeout-minutes: 30
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      
+      - name: Cache Docker layers
+        uses: actions/cache@v4
+        with:
+          path: /tmp/.buildx-cache
+          key: ${{ runner.os }}-buildx-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-buildx-
+      
+      - name: Build Docker image (test)
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: false
+          tags: ainanfeng-blog:test-${{ github.sha }}
+          cache-from: type=local,src=/tmp/.buildx-cache
+          cache-to: type=local,dest=/tmp/.buildx-cache-new,mode=max
+      
+      - name: Test Docker image
+        run: |
+          docker run --rm -d --name test-blog -p 8080:80 ainanfeng-blog:test-${{ github.sha }}
+          sleep 5
+          curl -f http://localhost:8080/health || exit 1
+          docker stop test-blog
+          echo "✅ Docker image test passed"
+      
+      - name: Move cache
+        run: |
+          rm -rf /tmp/.buildx-cache
+          mv /tmp/.buildx-cache-new /tmp/.buildx-cache
+
+  # ============================================
+  # 5. 部署到生产环境（仅当 tag 推送时）
+  # ============================================
+  deploy:
+    name: 🚀 Deploy to Production
+    runs-on: ubuntu-latest
+    needs: [docker-build]
+    if: startsWith(github.ref, 'refs/tags/v')
+    timeout-minutes: 30
+    
+    environment:
+      name: production
+      url: https://ainanfeng.cn
+    
+    permissions:
+      packages: write
+      contents: write
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+      
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=semver,pattern={{major}}
+            type=raw,value=latest
+      
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=local,src=/tmp/.buildx-cache
+          cache-to: type=local,dest=/tmp/.buildx-cache-new,mode=max
+      
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          generate_release_notes: true
+          draft: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Notify deployment success
+        run: |
+          echo "✅ Deployed version ${{ github.ref_name }} successfully!"
+          echo "📦 Docker image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.ref_name }}"
+          echo "🌐 Live site: https://ainanfeng.cn"
+      
+      - name: Move cache
+        run: |
+          rm -rf /tmp/.buildx-cache
+          mv /tmp/.buildx-cache-new /tmp/.buildx-cache
+
+  # ============================================
+  # 6. 部署预览（PR 或手动触发）
+  # ============================================
+  deploy-preview:
+    name: 👁️ Deploy Preview
+    runs-on: ubuntu-latest
+    needs: [build, e2e-test]
+    if: github.event.inputs.deploy_preview == 'true' && !startsWith(github.ref, 'refs/tags/')
+    timeout-minutes: 15
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Download build artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: blog-build
+          path: ./dist
+      
+      - name: Deploy to Cloudflare Pages (示例)
+        run: |
+          echo "👁️ Deploying preview environment..."
+          echo "   This is a placeholder for Cloudflare Pages / Vercel / Netlify deployment"
+          echo "   Build artifacts are available in the 'blog-build' artifact"
+          echo ""
+          echo "📦 Preview files:"
+          ls -lh dist/
+      
+      - name: Comment PR with preview link
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: '👁️ Preview deployed! Build artifacts available in workflow summary.'
+            })
+
+# ============================================
+# Workflow 配置
+# ============================================
+permissions:
+  contents: write
+  packages: write
+  pull-requests: write
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true

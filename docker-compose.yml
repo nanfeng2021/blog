@@ -1,0 +1,105 @@
+version: '3.8'
+
+services:
+  # 博客服务
+  blog:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: nanfeng-blog
+    ports:
+      - "8080:80"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/health"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 5s
+    networks:
+      - blog-network
+    labels:
+      - "com.nanfeng.blog.service=blog"
+      - "com.nanfeng.blog.version=1.0.0"
+
+  # RAG 知识库服务（可选）
+  rag:
+    image: python:3.12-slim
+    container_name: nanfeng-rag
+    ports:
+      - "7860:7860"
+    restart: unless-stopped
+    working_dir: /app
+    volumes:
+      - ../rag-knowledge-base:/app
+    command: >
+      bash -c "cd /app && 
+               if [ -d venv ]; then 
+                 source venv/bin/activate; 
+               fi && 
+               python scripts/web_ui_simple.py"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:7860/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    networks:
+      - blog-network
+    depends_on: []
+    profiles:
+      - with-rag
+
+  # Umami 统计（可选，如需自托管）
+  umami:
+    image: ghcr.io/umami-software/umami:postgresql-latest
+    container_name: nanfeng-umami
+    ports:
+      - "3000:3000"
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgresql://umami:umami@umami-db:5432/umami
+      DATABASE_TYPE: postgresql
+      APP_SECRET: replace-with-secret-key
+    depends_on:
+      umami-db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/api/heartbeat"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    networks:
+      - blog-network
+    profiles:
+      - with-umami
+
+  # Umami PostgreSQL 数据库
+  umami-db:
+    image: postgres:15-alpine
+    container_name: nanfeng-umami-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: umami
+      POSTGRES_USER: umami
+      POSTGRES_PASSWORD: umami
+    volumes:
+      - umami-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U umami"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - blog-network
+    profiles:
+      - with-umami
+
+networks:
+  blog-network:
+    driver: bridge
+    name: nanfeng-blog-network
+
+volumes:
+  umami-data:
+    name: nanfeng-umami-data

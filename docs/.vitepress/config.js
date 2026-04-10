@@ -1,10 +1,15 @@
 import { defineConfig } from 'vitepress'
 
+// 配置版本号，用于强制刷新缓存
+const CONFIG_VERSION = '20260409-1752'
+
 export default defineConfig({
   title: "南风的博客",
   description: "南风的博客 - 专注于 AI 技术、编程实践与生活感悟的个人博客。分享深度学习、大模型应用、开发教程等高质量内容，记录技术成长之路。",
   
+  // 添加版本标记到 head
   head: [
+    ['meta', { name: 'config-version', content: CONFIG_VERSION }],
     ['link', { rel: 'icon', href: '/logo.png' }],
     
     // SEO Meta 标签
