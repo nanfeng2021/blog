@@ -114,7 +114,7 @@ st.markdown("""
 
 
 # ==================== Fragment 装饰器（局部刷新） ====================
-@st.experimental_fragment(run_every=0.05)  # 50ms = 20 FPS
+@st.fragment(run_every=0.05)  # 50ms = 20 FPS
 def live_monitoring_fragment():
     """实时监控画面的局部刷新 fragment"""
     if not st.session_state.running:
