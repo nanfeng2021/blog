@@ -14,6 +14,7 @@
 - **RAG 知识库**: [http://localhost:7860](http://localhost:7860)
 - **情感分析**: [http://localhost:8001](http://localhost:8001)
 - **AI 俄罗斯方块**: [http://localhost:5000](http://localhost:5000)
+- **摔倒检测系统**: [http://localhost:8501](http://localhost:8501)
 
 ---
 
@@ -55,7 +56,7 @@ docker-compose down
 ### 使用启动脚本
 
 ```bash
-# 一键启动所有服务（博客 + RAG + 情感分析 + AI 方块）
+# 一键启动所有服务（博客 + RAG + 情感分析 + AI 方块 + 摔倒检测）
 ./start-all.sh
 
 # 单独启动博客
@@ -63,6 +64,19 @@ npm run dev
 
 # Docker 部署
 ./scripts/deploy-docker.sh
+```
+
+### 启动特定服务
+
+```bash
+# 只启动摔倒检测系统
+docker-compose --profile with-fall-detection up -d fall-detection
+
+# 只启动 RAG 知识库
+docker-compose --profile with-rag up -d rag
+
+# 启动所有服务
+docker-compose --profile with-rag --profile with-fall-detection up -d
 ```
 
 ---
@@ -78,6 +92,13 @@ blog/
 │   ├── posts/                 # 文章
 │   ├── public/                # 静态资源
 │   └── .vitepress/            # VitePress 配置
+├── projects/                  # 集成的项目应用
+│   ├── fall-detection/        # 摔倒检测系统 🚨
+│   │   ├── app_optimized.py   # 主应用
+│   │   ├── requirements.txt   # Python 依赖
+│   │   ├── Dockerfile         # Docker 配置
+│   │   └── README.md          # 项目文档
+│   └── ...                    # 其他项目
 ├── tests/
 │   └── e2e/                   # E2E 测试
 ├── scripts/                   # 运维脚本

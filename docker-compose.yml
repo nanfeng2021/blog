@@ -50,6 +50,26 @@ services:
     profiles:
       - with-rag
 
+  # 摔倒检测系统（可选）
+  fall-detection:
+    build:
+      context: ./projects/fall-detection
+      dockerfile: Dockerfile
+    container_name: nanfeng-fall-detection
+    ports:
+      - "8501:8501"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8501/_stcore/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    networks:
+      - blog-network
+    profiles:
+      - with-fall-detection
+
   # Umami 统计（可选，如需自托管）
   umami:
     image: ghcr.io/umami-software/umami:postgresql-latest
