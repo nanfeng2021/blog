@@ -10,11 +10,19 @@
 
 ## 🌐 在线访问
 
-- **博客首页**: [https://ainanfeng.cn](https://ainanfeng.cn)
+### 直接访问（开发环境）
+- **博客首页**: [http://localhost:8080](http://localhost:8080)
 - **RAG 知识库**: [http://localhost:7860](http://localhost:7860)
 - **情感分析**: [http://localhost:8001](http://localhost:8001)
 - **AI 俄罗斯方块**: [http://localhost:5000](http://localhost:5000)
 - **摔倒检测系统**: [http://localhost:8501](http://localhost:8501)
+
+### Nginx 统一入口（生产环境）
+- **博客首页**: [http://localhost/](http://localhost/)
+- **RAG 知识库**: [http://localhost/rag/](http://localhost/rag/)
+- **情感分析**: [http://localhost/emotion/](http://localhost/emotion/)
+- **AI 俄罗斯方块**: [http://localhost/tetris/](http://localhost/tetris/)
+- **摔倒检测系统**: [http://localhost/fall-detection/](http://localhost/fall-detection/)
 
 ---
 
