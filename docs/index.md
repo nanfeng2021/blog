@@ -14,6 +14,9 @@ hero:
     - theme: alt
       text: 关于我
       link: /about
+    - theme: alt
+      text: 项目演示
+      link: /projects
 features:
   - icon: 🤖
     title: AI 与大模型
@@ -24,13 +27,20 @@ features:
   - icon: 📝
     title: 生活感悟
     details: 工作之余的思考，生活点滴记录，保持对世界的好奇心
-  - icon: 🚀
-    title: 持续更新
-    details: 定期发布新内容，跟随技术发展不断学习和分享
-  - icon: 🎯
-    title: 实战导向
-    details: 注重实用性，每篇文章都力求解决实际问题
-  - icon: 💡
-    title: 深度思考
-    details: 不止于表面，深入探讨技术背后的原理和思想
+  - icon: 🚨
+    title: 摔倒检测系统
+    details: 基于 3D 点云的实时监控系统，自动识别摔倒行为并预警
+    link: /fall-detection/
+  - icon: 🧠
+    title: RAG 知识库
+    details: 检索增强生成的 AI 问答系统，支持文档检索和智能对话
+    link: /rag/
+  - icon: 😊
+    title: 情感分析
+    details: 文本情感识别与分析，洞察文字背后的情绪波动
+    link: /emotion/
+  - icon: 🎮
+    title: AI 俄罗斯方块
+    details: AI 智能体自主学习的经典游戏，见证机器的成长过程
+    link: /tetris/
 ---

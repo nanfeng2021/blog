@@ -1,11 +1,14 @@
 import { defineConfig } from 'vitepress'
 
 // 配置版本号，用于强制刷新缓存
-const CONFIG_VERSION = '20260409-1752'
+const CONFIG_VERSION = '20260412-0953'
 
 export default defineConfig({
   title: "南风的博客",
   description: "南风的博客 - 专注于 AI 技术、编程实践与生活感悟的个人博客。分享深度学习、大模型应用、开发教程等高质量内容，记录技术成长之路。",
+  
+  // 忽略死链检查（外部链接和本地服务链接）
+  ignoreDeadLinks: true,
   
   // 添加版本标记到 head
   head: [
@@ -90,8 +93,9 @@ export default defineConfig({
     nav: [
       { text: '首页', link: '/' },
       { text: '文章', link: '/posts/' },
-      { text: '🤖 RAG 知识库', link: '/rag' },
-      { text: '🧠 情感分析', link: '/emotion' },
+      { text: '🚀 项目演示', link: '/projects' },
+      { text: '🤖 RAG', link: '/rag' },
+      { text: '😊 情感分析', link: '/emotion' },
       { text: '🎮 AI 方块', link: '/tetris' },
       { text: '关于', link: '/about' }
     ],
