@@ -93,10 +93,7 @@ export default defineConfig({
     nav: [
       { text: '首页', link: '/' },
       { text: '文章', link: '/posts/' },
-      { text: '🚀 项目演示', link: '/projects' },
-      { text: '🤖 RAG', link: '/rag' },
-      { text: '😊 情感分析', link: '/emotion' },
-      { text: '🎮 AI 方块', link: '/tetris' },
+      { text: '🤖 AI 与大模型', link: '/ai-projects' },
       { text: '关于', link: '/about' }
     ],
 
