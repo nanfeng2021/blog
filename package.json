@@ -8,6 +8,10 @@
     "dev": "vitepress dev docs",
     "build": "vitepress build docs",
     "preview": "vitepress preview docs",
+    
+    "dev:gray": "vitepress dev docs --base /gray/",
+    "build:gray": "VITEPRESS_BASE=/gray/ vitepress build docs",
+    
     "test": "playwright test",
     "test:ui": "playwright test --ui",
     "test:debug": "playwright test --debug",

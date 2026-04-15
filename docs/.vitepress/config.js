@@ -92,7 +92,15 @@ export default defineConfig({
     // 顶部导航
     nav: [
       { text: '首页', link: '/' },
-      { text: '文章', link: '/posts/' },
+      { 
+        text: '文章', 
+        link: '/posts/',
+        items: [
+          { text: '📚 所有文章', link: '/posts/' },
+          { text: '🗺️ AI 学习路线图', link: '/ai-learning-roadmap' },
+          { text: '🎓 AI 学习中心', link: '/ai-learning/' }
+        ]
+      },
       { text: '🤖 AI 与大模型', link: '/ai-projects' },
       { text: '关于', link: '/about' }
     ],
