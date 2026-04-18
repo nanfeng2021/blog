@@ -1,103 +1,141 @@
 version: '3.8'
 
 services:
-  # 博客服务
-  blog:
+  # ============================================
+  # 博客主服务（多环境支持）
+  # ============================================
+  
+  # 生产环境
+  blog-production:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: nanfeng-blog
-    ports:
-      - "8080:80"
+    container_name: blog-prod
     restart: unless-stopped
+    environment:
+      - NODE_ENV=production
+      - VITEPRESS_BASE=/
+      - VITE_ENV=production
+    ports:
+      - "8082:80"
+    volumes:
+      # 共享数据卷
+      - blog-shared-data:/usr/share/nginx/html/data
+      # 日志卷
+      - blog-prod-logs:/var/log/nginx
+    networks:
+      - blog-network
+    labels:
+      - "com.nanfeng.blog.env=production"
+      - "com.nanfeng.blog.version=${GIT_COMMIT:-latest}"
     healthcheck:
       test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/health"]
       interval: 30s
       timeout: 3s
       retries: 3
-      start_period: 5s
+      start_period: 10s
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M
+        reservations:
+          cpus: '0.5'
+          memory: 256M
+
+  # 灰度环境
+  blog-gray:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: blog-gray
+    restart: unless-stopped
+    environment:
+      - NODE_ENV=gray
+      - VITEPRESS_BASE=/
+      - VITE_ENV=gray
+    ports:
+      - "8081:80"
+    volumes:
+      # 共享数据卷
+      - blog-shared-data:/usr/share/nginx/html/data
+      # 独立日志卷
+      - blog-gray-logs:/var/log/nginx
     networks:
       - blog-network
     labels:
-      - "com.nanfeng.blog.service=blog"
-      - "com.nanfeng.blog.version=1.0.0"
+      - "com.nanfeng.blog.env=gray"
+      - "com.nanfeng.blog.version=${GIT_COMMIT:-latest}"
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/health"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 10s
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+        reservations:
+          cpus: '0.25'
+          memory: 128M
 
-  # RAG 知识库服务（可选）
-  rag:
-    image: python:3.12-slim
-    container_name: nanfeng-rag
-    ports:
-      - "7860:7860"
+  # ============================================
+  # Nginx 反向代理（金丝雀发布）
+  # ============================================
+  nginx-proxy:
+    image: nginx:alpine
+    container_name: blog-nginx
     restart: unless-stopped
-    working_dir: /app
+    ports:
+      - "80:80"
+      - "443:443"
     volumes:
-      - ../rag-knowledge-base:/app
-    command: >
-      bash -c "cd /app && 
-               if [ -d venv ]; then 
-                 source venv/bin/activate; 
-               fi && 
-               python scripts/web_ui_simple.py"
+      # Nginx 配置
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/conf.d:/etc/nginx/conf.d:ro
+      # SSL 证书
+      - ./nginx/ssl:/etc/nginx/ssl:ro
+      # 日志
+      - blog-nginx-logs:/var/log/nginx
+    depends_on:
+      - blog-production
+      - blog-gray
+    networks:
+      - blog-network
+    labels:
+      - "com.nanfeng.blog.service=proxy"
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:7860/health"]
+      test: ["CMD", "nginx", "-t"]
       interval: 30s
       timeout: 5s
       retries: 3
-      start_period: 10s
-    networks:
-      - blog-network
-    depends_on: []
-    profiles:
-      - with-rag
 
-  # 摔倒检测系统（可选）
-  fall-detection:
-    build:
-      context: ./projects/fall-detection
-      dockerfile: Dockerfile
-    container_name: nanfeng-fall-detection
-    ports:
-      - "8501:8501"
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8501/_stcore/health"]
-      interval: 30s
-      timeout: 5s
-      retries: 3
-      start_period: 10s
-    networks:
-      - blog-network
-    profiles:
-      - with-fall-detection
-
-  # Umami 统计（可选，如需自托管）
+  # ============================================
+  # Umami 统计（可选）
+  # ============================================
   umami:
     image: ghcr.io/umami-software/umami:postgresql-latest
-    container_name: nanfeng-umami
-    ports:
-      - "3000:3000"
+    container_name: blog-umami
     restart: unless-stopped
     environment:
       DATABASE_URL: postgresql://umami:umami@umami-db:5432/umami
       DATABASE_TYPE: postgresql
-      APP_SECRET: replace-with-secret-key
+      APP_SECRET: ${UMAMI_APP_SECRET:-replace-with-secret-key}
+    volumes:
+      - umami-data:/var/lib/postgresql/data
+    networks:
+      - blog-network
     depends_on:
       umami-db:
         condition: service_healthy
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3000/api/heartbeat"]
-      interval: 30s
-      timeout: 5s
-      retries: 3
-    networks:
-      - blog-network
     profiles:
-      - with-umami
+      - with-monitoring
 
-  # Umami PostgreSQL 数据库
   umami-db:
     image: postgres:15-alpine
-    container_name: nanfeng-umami-db
+    container_name: blog-umami-db
     restart: unless-stopped
     environment:
       POSTGRES_DB: umami
@@ -105,21 +143,98 @@ services:
       POSTGRES_PASSWORD: umami
     volumes:
       - umami-data:/var/lib/postgresql/data
+    networks:
+      - blog-network
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U umami"]
       interval: 10s
       timeout: 5s
       retries: 5
+    profiles:
+      - with-monitoring
+
+  # ============================================
+  # 监控与日志（可选）
+  # ============================================
+  
+  # Prometheus 监控
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: blog-prometheus
+    restart: unless-stopped
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+    ports:
+      - "9090:9090"
     networks:
       - blog-network
     profiles:
-      - with-umami
+      - with-monitoring
+
+  # Grafana 可视化
+  grafana:
+    image: grafana/grafana:latest
+    container_name: blog-grafana
+    restart: unless-stopped
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-admin123}
+    volumes:
+      - grafana-data:/var/lib/grafana
+    ports:
+      - "3000:3000"
+    networks:
+      - blog-network
+    depends_on:
+      - prometheus
+    profiles:
+      - with-monitoring
+
+  # 日志聚合（Loki + Promtail）
+  loki:
+    image: grafana/loki:latest
+    container_name: blog-loki
+    restart: unless-stopped
+    volumes:
+      - ./monitoring/loki.yml:/etc/loki/local-config.yaml:ro
+      - loki-data:/loki
+    ports:
+      - "3100:3100"
+    networks:
+      - blog-network
+    profiles:
+      - with-monitoring
 
 networks:
   blog-network:
     driver: bridge
     name: nanfeng-blog-network
+    ipam:
+      config:
+        - subnet: 172.28.0.0/16
 
 volumes:
+  # 共享数据卷（生产与灰度共享）
+  blog-shared-data:
+    name: blog-shared-data
+  
+  # 独立日志卷
+  blog-prod-logs:
+    name: blog-prod-logs
+  blog-gray-logs:
+    name: blog-gray-logs
+  blog-nginx-logs:
+    name: blog-nginx-logs
+  
+  # 监控数据
   umami-data:
-    name: nanfeng-umami-data
+    name: blog-umami-data
+  prometheus-data:
+    name: blog-prometheus-data
+  grafana-data:
+    name: blog-grafana-data
+  loki-data:
+    name: blog-loki-data

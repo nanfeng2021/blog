@@ -1,52 +1,36 @@
-# Node dependencies
-node_modules/
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
+# 环境变量（敏感信息）
+.env
+.env.local
+.env.*.local
 
-# Build output
-dist/
+# Docker 数据卷
+volumes/
+
+# 构建产物
 docs/.vitepress/dist/
-.vitepress/dist/
+
+# 日志文件
+*.log
+logs/
+
+# Node modules
+node_modules/
 
 # IDE
 .vscode/
 .idea/
 *.swp
 *.swo
-*~
 
 # OS
 .DS_Store
 Thumbs.db
-desktop.ini
 
-# Logs
-logs/
-*.log
-
-# Environment variables
-.env
-.env.local
-.env.*.local
-
-# Test coverage
-coverage/
-.nyc_output/
-
-# Playwright
-playwright-report/
-test-results/
-playwright/.cache/
-
-# Temporary files
+# 临时文件
 tmp/
 temp/
 *.tmp
 
-# Docker
-.docker/
-
-# Local config (if needed)
-config.local.js
-*.local.js
+# SSL 证书（应该放在安全位置）
+nginx/ssl/*.pem
+nginx/ssl/*.key
