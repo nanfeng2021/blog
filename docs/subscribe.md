@@ -141,7 +141,7 @@ page: true
 <div class="step">
 <span class="step-number">3</span>
 <h3>添加客服微信</h3>
-<p>支付成功后，添加客服微信：<code class="wechat-id">nanfeng_ai</code></p>
+<p>支付成功后，添加客服微信：<code class="wechat-id">KFCvMe50xiaxia</code></p>
 <p>发送支付截图，并告知：</p>
 <ul>
 <li>订阅的方案类型</li>
@@ -192,7 +192,7 @@ page: true
 <h2>📞 联系我们</h2>
 <p>如有任何问题，欢迎通过以下方式联系：</p>
 <ul>
-<li>微信客服：<code class="wechat-id">nanfeng_ai</code></li>
+<li>微信客服：<code class="wechat-id">KFCvMe50xiaxia</code></li>
 <li>邮箱：<a href="mailto:support@ainanfeng.cn">support@ainanfeng.cn</a></li>
 <li>工作时间：周一至周日 9:00-21:00</li>
 </ul>

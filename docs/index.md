@@ -18,6 +18,10 @@ hero:
       text: 项目演示
       link: /projects
 features:
+  - icon: 🎯
+    title: AI 学习路线图
+    details: 从 AI 发展历史到前沿技术的完整学习路径，包含重要理论和热门方向
+    link: /ai-learning-roadmap
   - icon: 🤖
     title: AI 与大模型
     details: 探索人工智能前沿技术，分享大模型应用实践与开发教程

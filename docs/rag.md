@@ -13,25 +13,22 @@ const iframeLoaded = ref(false)
 const isLoading = ref(true)
 
 onMounted(() => {
-  // 检查 RAG 服务是否可用
   checkRagService()
 })
 
 async function checkRagService() {
   try {
-    // 使用 GET 请求并设置超时
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 3000);
     
     const response = await fetch('http://localhost:7860', { 
       method: 'GET',
       signal: controller.signal,
-      mode: 'no-cors' // 允许跨域访问本地服务
+      mode: 'no-cors'
     });
     
     clearTimeout(timeoutId);
     
-    // no-cors 模式下 opaque 响应也认为是成功
     if (response.ok || response.type === 'opaque') {
       iframeLoaded.value = true;
       isLoading.value = false;
@@ -49,19 +46,13 @@ function openInNewTab() {
 }
 </script>
 
+<ClientOnly>
 <div class="rag-container">
   <div class="rag-header">
     <h1 style="margin-bottom: 0.5rem;">🤖 RAG 知识库查询系统</h1>
     <p class="rag-description">基于本地知识库的智能问答系统 - 专注于数控加工与 CAD/CAM 领域</p>
     
-    <div class="rag-actions">
-      <button @click="openInNewTab" class="btn-primary">
-        🚀 在新窗口打开
-      </button>
-      <a href="/rag-knowledge-base/QUICKSTART.md" class="btn-secondary">
-        📖 使用文档
-      </a>
-    </div>
+    <!-- 操作按钮已移除 -->
   </div>
 
   <div v-if="isLoading" class="loading-state">
@@ -148,6 +139,7 @@ function openInNewTab() {
     </div>
   </div>
 </div>
+</ClientOnly>
 
 <style scoped>
 .rag-container {
