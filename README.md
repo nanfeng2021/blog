@@ -1,28 +1,80 @@
 # 🚀 南风的博客
 
-> 专注于 AI 技术、编程实践与生活感悟的个人博客
+> 专注于 AI 技术、编程实践与生活感悟的个人博客 | AI Learning Journey
 
 [![CI/CD Pipeline](https://github.com/nanfeng2021/blog/actions/workflows/ci-cd.yml/badge.svg)](https://github.com/nanfeng2021/blog/actions/workflows/ci-cd.yml)
 [![Docker Build](https://img.shields.io/docker/builds/nanfeng2021/ainanfeng-blog)](https://hub.docker.com/r/nanfeng2021/ainanfeng-blog)
 [![Harness Compliance](https://img.shields.io/badge/Harness-70%25-green)](HARNESS_COMPLIANCE.md)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
+---
+
+## 🌟 最近更新
+
+- **2026-04-18**: ✨ 新增完整的 AI 学习路线图，涵盖从机器学习到多模态大模型的全栈知识体系
+- **2026-04-18**: 🚨 摔倒检测系统优化完成，支持 HTTPS 访问和静态资源缓存
+- **2026-04-15**: 📚 添加 AI 学习资源合集，包括吴恩达 ML、CS224n、CS231n 等经典课程笔记
 
 ---
 
 ## 🌐 在线访问
 
-### 直接访问（开发环境）
+### 生产环境（HTTPS）
+- **博客首页**: [https://ainanfeng.cn](https://ainanfeng.cn)
+- **摔倒检测系统**: [https://ainanfeng.cn/fall-detection/](https://ainanfeng.cn/fall-detection/) 🔒
+- **RAG 知识库**: [https://ainanfeng.cn/rag/](https://ainanfeng.cn/rag/)
+- **情感分析系统**: [https://ainanfeng.cn/emotion/](https://ainanfeng.cn/emotion/)
+- **AI 俄罗斯方块**: [https://ainanfeng.cn/tetris/](https://ainanfeng.cn/tetris/)
+
+### 开发环境（本地）
 - **博客首页**: [http://localhost:8080](http://localhost:8080)
 - **RAG 知识库**: [http://localhost:7860](http://localhost:7860)
 - **情感分析**: [http://localhost:8001](http://localhost:8001)
 - **AI 俄罗斯方块**: [http://localhost:5000](http://localhost:5000)
 - **摔倒检测系统**: [http://localhost:8501](http://localhost:8501)
 
-### Nginx 统一入口（生产环境）
-- **博客首页**: [http://localhost/](http://localhost/)
-- **RAG 知识库**: [http://localhost/rag/](http://localhost/rag/)
-- **情感分析**: [http://localhost/emotion/](http://localhost/emotion/)
-- **AI 俄罗斯方块**: [http://localhost/tetris/](http://localhost/tetris/)
-- **摔倒检测系统**: [http://localhost/fall-detection/](http://localhost/fall-detection/)
+---
+
+## 📚 AI 学习路线图
+
+本项目包含完整的 AI 学习文档，按照以下路线组织：
+
+### 📖 第一阶段：AI 发展史
+- ✅ [图灵测试与早期思想](docs/ai-learning/history/turing-test.md)
+- ✅ [符号主义与知识工程](docs/ai-learning/history/symbolism.md)
+- ✅ [连接主义与神经网络起源](docs/ai-learning/history/connectionism.md)
+- ✅ [感知机与第一次寒冬](docs/ai-learning/history/perceptron.md)
+- ✅ [专家系统与第二次寒冬](docs/ai-learning/history/expert-systems.md)
+- ✅ [深度学习复兴](docs/ai-learning/history/deep-learning-revival.md)
+
+### 🧠 第二阶段：机器学习基础
+- 🔄 统计学习方法
+- 🔄 监督学习算法
+- 🔄 无监督学习算法
+- 🔄 强化学习基础
+
+### 🤖 第三阶段：深度学习
+- ⏳ 神经网络基础
+- ⏳ CNN 与计算机视觉
+- ⏳ RNN/LSTM 与序列建模
+- ⏳ Transformer 架构
+- ⏳ Attention 机制
+
+### 🌐 第四阶段：大语言模型
+- ⏳ GPT 系列模型
+- ⏳ BERT 与预训练模型
+- ⏳ Prompt Engineering
+- ⏳ Fine-tuning 技术
+- ⏳ RAG 检索增强生成
+
+### 🎨 第五阶段：多模态与前沿
+- ⏳ Stable Diffusion
+- ⏳ Sora 与视频生成
+- ⏳ 多模态融合
+- ⏳ Agent 与工具使用
+- ⏳ 价值对齐与安全
+
+**📖 完整学习资源**: [AI 学习资源索引](docs/ai-learning/resources/index.md)
 
 ---
 
@@ -98,6 +150,10 @@ blog/
 │       └── ci-cd.yml          # CI/CD 流水线
 ├── docs/                      # 博客内容
 │   ├── posts/                 # 文章
+│   ├── ai-learning/           # 🆕 AI 学习路线图
+│   │   ├── history/           # AI 发展史
+│   │   ├── topics/            # 技术主题
+│   │   └── resources/         # 学习资源
 │   ├── public/                # 静态资源
 │   └── .vitepress/            # VitePress 配置
 ├── projects/                  # 集成的项目应用
@@ -248,19 +304,10 @@ sudo tail -f /var/log/nginx/ainanfeng.cn.error.log
 - [博客首页](https://ainanfeng.cn)
 - [GitHub 仓库](https://github.com/nanfeng2021/blog)
 - [Docker Hub](https://hub.docker.com/r/nanfeng2021/ainanfeng-blog)
+- [AI 学习路线图](docs/ai-learning/index.md)
 - [Harness Engineering 规范](../docs/龙虾-Harness-Engineering-工程实践.md)
 - [VitePress 文档](https://vitepress.dev/)
 - [Playwright 文档](https://playwright.dev/)
-
----
-
-## 📝 学习进度
-
-| 阶段 | 时间 | 主题 | 状态 |
-|------|------|------|------|
-| 第 1 月 | 03-23 ~ 04-20 | 机器学习基础 | 🔄 进行中 |
-| 第 2 月 | 04-21 ~ 05-18 | 深度学习入门 | ⏳ 待开始 |
-| 第 3 月 | 05-19 ~ 06-13 | 大模型与实战 | ⏳ 待开始 |
 
 ---
 
@@ -277,5 +324,6 @@ MIT License © 2026 南风
 
 ---
 
-_最后更新：2026-04-10_  
-_Harness 合规性评分：70/100 🎉_
+_最后更新：2026-04-18_  
+_Harness 合规性评分：70/100 🎉_  
+_AI 学习文档：50+ 篇 📚_
