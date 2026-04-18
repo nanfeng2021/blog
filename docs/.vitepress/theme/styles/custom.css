@@ -1,0 +1,79 @@
+/* 自定义全局样式 */
+
+/* 平滑滚动 */
+html {
+  scroll-behavior: smooth;
+}
+
+/* 改进选中文本样式 */
+::selection {
+  background: var(--vp-c-brand-light);
+  color: var(--vp-c-white);
+}
+
+.dark ::selection {
+  background: var(--vp-c-brand-dark);
+  color: var(--vp-c-white);
+}
+
+/* 改进链接悬停效果 */
+.vp-doc a {
+  transition: all 0.2s ease;
+}
+
+.vp-doc a:hover {
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+/* 代码块优化 */
+.vp-code-group .tabs {
+  border-bottom: 1px solid var(--vp-c-divider);
+}
+
+/* 表格优化 */
+.vp-doc table {
+  font-size: 0.875rem;
+}
+
+.vp-doc th {
+  font-weight: 600;
+  background: var(--vp-c-bg-soft);
+}
+
+/* 引用块优化 */
+.vp-doc blockquote {
+  border-left: 4px solid var(--vp-c-brand);
+  padding-left: 1rem;
+  color: var(--vp-c-text-2);
+}
+
+/* 暗色模式优化 */
+.dark .vp-doc img {
+  opacity: 0.9;
+}
+
+/* 移动端优化 */
+@media (max-width: 768px) {
+  .vp-doc h1 {
+    font-size: 1.75rem;
+  }
+  
+  .vp-doc h2 {
+    font-size: 1.5rem;
+  }
+  
+  .vp-doc h3 {
+    font-size: 1.25rem;
+  }
+}
+
+/* 打印优化 */
+@media print {
+  .theme-toggle,
+  .reading-progress,
+  .mobile-toc-toggle,
+  .giscus-comments {
+    display: none !important;
+  }
+}

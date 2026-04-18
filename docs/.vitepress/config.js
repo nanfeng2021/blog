@@ -10,6 +10,9 @@ export default defineConfig({
   // 忽略死链检查（外部链接和本地服务链接）
   ignoreDeadLinks: true,
   
+  // 基础路径配置（支持灰度环境）
+  base: process.env.VITEPRESS_BASE || '/',
+  
   // 添加版本标记到 head
   head: [
     ['meta', { name: 'config-version', content: CONFIG_VERSION }],
@@ -35,6 +38,8 @@ export default defineConfig({
     
     // 其他 SEO 优化
     ['meta', { name: 'theme-color', content: '#3B82F6' }],
+    ['meta', { name: 'color-scheme', content: 'light dark' }],
+    ['meta', { name: 'supported-color-schemes', content: 'light dark' }],
     
     // 📊 Umami 统计代码
     [
@@ -47,6 +52,9 @@ export default defineConfig({
       }
     ]
   ],
+  
+  // 启用暗色模式
+  appearance: 'dark',
   
   themeConfig: {
     // 🔍 站内搜索配置
