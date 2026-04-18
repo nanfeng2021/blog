@@ -1,37 +1,89 @@
 # 🚀 南风博客 - 部署指南
 
-_完整部署流程，从本地开发到生产环境_
+> 企业级灰度发布架构部署文档
 
 ---
 
-## 📋 前置要求
+## 📋 目录
 
-### 系统要求
+1. [架构概览](#架构概览)
+2. [环境要求](#环境要求)
+3. [快速开始](#快速开始)
+4. [配置说明](#配置说明)
+5. [部署流程](#部署流程)
+6. [金丝雀发布](#金丝雀发布)
+7. [监控与日志](#监控与日志)
+8. [故障排查](#故障排查)
 
-- Node.js >= 20.0.0
-- npm >= 9.0.0
+---
+
+## 架构概览
+
+### 环境隔离
+
+```
+┌─────────────────────────────────────────────┐
+│         GitHub (单一代码源)                 │
+└─────────────────────────────────────────────┘
+                    ↓
+        ┌───────────┴───────────┐
+        ↓                       ↓
+   灰度环境                生产环境
+ gray.ainanfeng.cn     ainanfeng.cn
+   Docker              Docker
+   Container           Container
+      ↓                   ↓
+ Port 8081            Port 8082
+      └───────┬───────────┘
+              ↓
+      Nginx 反向代理
+    (金丝雀路由 + SSL)
+              ↓
+         用户访问
+```
+
+### 核心特性
+
+✅ **一套代码**：所有环境使用同一代码库  
+✅ **数据共享**：通过 Docker Volume 共享数据  
+✅ **完全隔离**：独立的容器、网络、资源配置  
+✅ **审批流程**：生产部署需手动确认  
+✅ **金丝雀发布**：支持流量比例分流  
+✅ **自动回滚**：健康检查失败自动回滚  
+
+---
+
+## 环境要求
+
+### 硬件要求
+
+| 组件 | CPU | 内存 | 磁盘 |
+|------|-----|------|------|
+| 基础部署 | 2 核 | 4GB | 20GB |
+| 完整部署（含监控） | 4 核 | 8GB | 50GB |
+
+### 软件要求
+
+- Docker 20.10+
+- Docker Compose 2.0+
 - Git
-- Docker（可选，用于容器化部署）
+- SSL 证书（Let's Encrypt 免费）
 
-### 检查环境
+### 域名配置
 
-```bash
-# 检查 Node.js
-node --version  # 应该 >= v20.0.0
+需要配置以下 DNS 记录：
 
-# 检查 npm
-npm --version   # 应该 >= 9.0.0
-
-# 检查 Git
-git --version
-
-# 检查 Docker（可选）
-docker --version
+```dns
+ainanfeng.cn      A     <服务器 IP>
+www.ainanfeng.cn  CNAME ainanfeng.cn
+gray.ainanfeng.cn A     <服务器 IP>
+monitor.ainanfeng.cn A  <服务器 IP>  # 可选
+metrics.ainanfeng.cn A  <服务器 IP>  # 可选
 ```
 
 ---
 
-## 🏠 本地开发部署
+## 快速开始
 
 ### 1. 克隆项目
 
@@ -40,436 +92,413 @@ git clone https://github.com/nanfeng2021/blog.git
 cd blog
 ```
 
-### 2. 安装依赖
+### 2. 配置环境变量
 
 ```bash
-npm install
+cp .env.example .env
+nano .env  # 编辑配置
 ```
 
-### 3. 启动开发服务器
+**必填配置**:
 
 ```bash
-npm run dev
+# Docker Hub 认证
+DOCKERHUB_USERNAME=your-username
+DOCKERHUB_TOKEN=your-token
+
+# Umami 统计（可选）
+UMAMI_APP_SECRET=your-secret
+
+# Grafana 密码（可选）
+GRAFANA_ADMIN_PASSWORD=your-password
 ```
 
-访问：http://localhost:5173
-
-### 4. 构建生产版本
+### 3. 获取 SSL 证书
 
 ```bash
-npm run build
+# 使用 Certbot 获取免费证书
+sudo apt install certbot python3-certbot-nginx
+
+sudo certbot certonly --standalone \
+  -d ainanfeng.cn \
+  -d www.ainanfeng.cn \
+  -d gray.ainanfeng.cn
+
+# 复制证书到项目目录
+sudo mkdir -p nginx/ssl
+sudo cp /etc/letsencrypt/live/ainanfeng.cn/fullchain.pem nginx/ssl/
+sudo cp /etc/letsencrypt/live/ainanfeng.cn/privkey.pem nginx/ssl/
 ```
 
-构建产物在：`docs/.vitepress/dist/`
-
-### 5. 预览生产构建
+### 4. 一键部署
 
 ```bash
-npm run preview
-```
+# 部署灰度环境
+./scripts/deploy.sh gray
 
-访问：http://localhost:4173
+# 部署生产环境
+./scripts/deploy.sh production
 
-### 6. 运行测试
-
-```bash
-# 安装 Playwright 浏览器（首次使用）
-npx playwright install
-
-# 运行所有测试
-npm test
-
-# 运行特定浏览器测试
-npx playwright test --project=chromium
-
-# 带 UI 运行
-npm run test:ui
-
-# 调试模式
-npm run test:debug
-```
-
----
-
-## 🐳 Docker 部署（推荐生产环境）
-
-### 方式一：使用 docker-compose（最简单）
-
-```bash
-# 一键启动所有服务
-docker-compose up -d
-
-# 查看日志
-docker-compose logs -f blog
-
-# 停止服务
-docker-compose down
-
-# 重建并重启
-docker-compose up -d --build
-```
-
-访问：http://localhost:8080
-
-### 方式二：手动 Docker 部署
-
-```bash
-# 1. 构建镜像
-docker build -t nanfeng2021/ainanfeng-blog:latest .
-
-# 2. 运行容器
-docker run -d \
-  --name nanfeng-blog \
-  -p 8080:80 \
-  --restart unless-stopped \
-  nanfeng2021/ainanfeng-blog:latest
-
-# 3. 查看日志
-docker logs -f nanfeng-blog
-
-# 4. 健康检查
-curl http://localhost:8080/health
-
-# 5. 停止服务
-docker stop nanfeng-blog
-docker rm nanfeng-blog
-```
-
-### 方式三：使用部署脚本
-
-```bash
-# 一键 Docker 部署
-./scripts/deploy-docker.sh
-
-# 健康检查
-./scripts/health-check.sh
+# 部署所有环境
+./scripts/deploy.sh all
 ```
 
 ---
 
-## ☁️ 云服务器部署
+## 配置说明
 
-### 腾讯云轻量应用服务器
+### Docker Compose 配置
 
-#### 1. 安装 Docker
-
-```bash
-# 更新系统
-sudo apt update && sudo apt upgrade -y
-
-# 安装 Docker
-curl -fsSL https://get.docker.com | sh
-
-# 启动 Docker
-sudo systemctl start docker
-sudo systemctl enable docker
-
-# 验证安装
-docker --version
+```yaml
+services:
+  blog-production:  # 生产环境
+    ports:
+      - "8082:80"   # 宿主机端口 8082
+    environment:
+      - VITE_ENV=production
+  
+  blog-gray:  # 灰度环境
+    ports:
+      - "8081:80"   # 宿主机端口 8081
+    environment:
+      - VITE_ENV=gray
+  
+  nginx-proxy:  # 反向代理
+    ports:
+      - "80:80"     # HTTP
+      - "443:443"   # HTTPS
 ```
 
-#### 2. 部署博客
+### Nginx 金丝雀配置
 
-```bash
-# 拉取镜像
-docker pull nanfeng2021/ainanfeng-blog:latest
-
-# 运行容器
-docker run -d \
-  --name nanfeng-blog \
-  -p 80:80 \
-  --restart unless-stopped \
-  nanfeng2021/ainanfeng-blog:latest
-```
-
-#### 3. 配置域名和 HTTPS
-
-```bash
-# 安装 Nginx（如果需要反向代理）
-sudo apt install nginx -y
-
-# 配置 Nginx
-sudo nano /etc/nginx/sites-available/ainanfeng.cn
-```
-
-Nginx 配置示例：
+编辑 `nginx/conf.d/default.conf`:
 
 ```nginx
-server {
-    listen 80;
-    server_name ainanfeng.cn www.ainanfeng.cn;
-    
-    location / {
-        proxy_pass http://localhost:8080;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-    }
+# 金丝雀发布比例
+set $canary_ratio 0.1;  # 10% 流量到灰度
+
+# 基于 Cookie 的路由
+if ($http_cookie ~* "gray_test=true") {
+    set $backend "blog_gray";
 }
 ```
-
-启用站点：
-
-```bash
-sudo ln -s /etc/nginx/sites-available/ainanfeng.cn /etc/nginx/sites-enabled/
-sudo nginx -t
-sudo systemctl restart nginx
-```
-
-#### 4. 配置 HTTPS（Let's Encrypt）
-
-```bash
-# 安装 Certbot
-sudo apt install certbot python3-certbot-nginx -y
-
-# 获取证书
-sudo certbot --nginx -d ainanfeng.cn -d www.ainanfeng.cn
-
-# 自动续期
-sudo crontab -e
-# 添加：0 3 * * * certbot renew --quiet
-```
-
----
-
-## 🔄 CI/CD 自动部署
 
 ### GitHub Actions 配置
 
-项目已包含完整的 CI/CD 流水线：`.github/workflows/ci-cd.yml`
+在 GitHub 仓库设置中添加 Secrets:
 
-#### 触发条件
-
-- **Push 到 main**: 运行 lint、build、test
-- **Pull Request**: 运行完整 CI + 预览部署
-- **Tag (v*)**: 构建 Docker 镜像并推送，创建 GitHub Release
-- **每周一凌晨 2 点**: 定时完整检查
-
-#### 配置 Secrets
-
-在 GitHub 仓库设置中添加以下 Secrets：
-
-1. 进入：Settings → Secrets and variables → Actions
-2. 点击：New repository secret
-3. 添加：
-
-| Name | Value |
-|------|-------|
-| `DOCKERHUB_USERNAME` | 你的 Docker Hub 用户名 |
-| `DOCKERHUB_TOKEN` | Docker Hub access token |
-
-#### 手动触发部署
-
-1. 进入 GitHub Actions 页面
-2. 选择 "Blog CI/CD Pipeline"
-3. 点击 "Run workflow"
-4. 选择分支和选项
-5. 点击 "Run workflow"
+1. **Settings → Secrets and variables → Actions**
+2. 添加以下 secrets:
+   - `DOCKERHUB_USERNAME`: Docker Hub 用户名
+   - `DOCKERHUB_TOKEN`: Docker Hub Access Token
+   - `UMAMI_APP_SECRET`: Umami 统计密钥（可选）
 
 ---
 
-## 📊 监控与维护
+## 部署流程
 
-### 健康检查
+### 开发流程
 
-```bash
-# 使用脚本
-./scripts/health-check.sh
-
-# 手动检查
-curl http://localhost:8080/health
-
-# 查看容器状态
-docker ps
-docker stats nanfeng-blog
+```mermaid
+graph TD
+    A[本地开发] --> B[提交到 develop 分支]
+    B --> C[自动构建镜像]
+    C --> D[部署到灰度环境]
+    D --> E{测试通过？}
+    E -->|是 | F[发起 PR 到 main]
+    E -->|否 | G[修复问题]
+    G --> B
+    F --> H[Code Review]
+    H --> I[合并到 main]
+    I --> J[GitHub Actions 审批]
+    J --> K[部署到生产]
 ```
 
-### 日志查看
+### 详细步骤
+
+#### 1. 功能开发（灰度环境）
 
 ```bash
-# Docker 日志
-docker logs -f nanfeng-blog
+# 本地开发
+npm run dev
 
-# 最近 100 行
-docker logs --tail 100 nanfeng-blog
+# 推送到 develop 分支
+git checkout -b feature/new-feature
+git commit -m "feat: add new feature"
+git push origin feature/new-feature
 
-# 带时间戳
-docker logs -f --timestamps nanfeng-blog
+# 创建 PR 到 develop
 ```
 
-### 备份数据
+#### 2. 灰度测试
 
 ```bash
-# 创建备份
-./scripts/backup.sh
-
-# 备份位置
-ls -lh /root/backups/blog/
-
-# 恢复备份
-cd /root/backups/blog
-tar -xzf blog_backup_YYYYMMDD_HHMMSS.tar.gz -C /root/.openclaw/workspace/blog
+# 自动部署到 gray.ainanfeng.cn
+# GitHub Actions 会自动：
+# 1. 构建 Docker 镜像
+# 2. 推送到 Docker Hub
+# 3. 部署到灰度环境
+# 4. 运行健康检查
 ```
 
-### 更新部署
+**访问灰度环境**:
+- URL: https://gray.ainanfeng.cn
+- 特征：页面右上角有"🧪 灰度测试环境"标识
 
-```bash
-# 1. 拉取最新代码
-cd /root/.openclaw/workspace/blog
-git pull origin main
+#### 3. 生产发布（需审批）
 
-# 2. 重新构建
-npm run build
+1. **发起发布请求**
+   ```bash
+   git checkout main
+   git merge develop
+   git push origin main
+   ```
 
-# 3. 重启服务
-# Docker 方式
-docker-compose up -d --build
+2. **等待 CI/CD 完成**
+   - 访问 GitHub Actions 查看进度
+   - 灰度环境自动更新
 
-# 或直接重启
-docker restart nanfeng-blog
-```
+3. **审批生产部署**
+   - 在 GitHub Actions 中点击 "Review pending deployments"
+   - 选择 Approve
+   - 生产环境开始部署
+
+4. **验证部署**
+   ```bash
+   # 查看状态
+   ./scripts/deploy.sh status
+   
+   # 查看日志
+   ./scripts/deploy.sh logs blog-production
+   ```
 
 ---
 
-## 🎯 性能优化建议
+## 金丝雀发布
 
-### 1. 启用 CDN
+### 什么是金丝雀发布？
+
+金丝雀发布是一种渐进式部署策略，将少量流量引导到新版本，验证稳定性后再全量发布。
+
+### 配置方式
+
+#### 方法 1：基于流量比例
+
+编辑 `nginx/conf.d/default.conf`:
 
 ```nginx
-# Nginx 配置中添加
-location ~* \.(jpg|jpeg|png|gif|ico|css|js)$ {
-    expires 1y;
-    add_header Cache-Control "public, immutable";
+# 修改这个值（0.0-1.0）
+set $canary_ratio 0.1;  # 10% 流量
+```
+
+#### 方法 2：基于 Cookie（推荐）
+
+用户可以主动加入灰度测试：
+
+```javascript
+// 在浏览器控制台执行
+document.cookie = "gray_test=true; max-age=86400; domain=.ainanfeng.cn"
+```
+
+刷新页面后，该用户将始终访问灰度环境（24 小时）。
+
+#### 方法 3：基于 URL 参数
+
+```bash
+# 访问时添加 ?canary=true 参数
+https://ainanfeng.cn/?canary=true
+```
+
+### 监控指标
+
+部署后需要监控：
+
+1. **错误率**: 应该 < 0.1%
+2. **响应时间**: P95 < 500ms
+3. **用户反馈**: 收集灰度环境用户意见
+
+---
+
+## 监控与日志
+
+### Prometheus 监控
+
+访问：http://metrics.ainanfeng.cn:9090
+
+**关键指标**:
+- `nginx_http_requests_total`: 请求总数
+- `nginx_upstream_response_time`: 后端响应时间
+- `node_memory_usage`: 内存使用率
+- `container_cpu_usage`: CPU 使用率
+
+### Grafana 可视化
+
+访问：http://monitor.ainanfeng.cn:3000
+
+**默认账号**:
+- Username: `admin`
+- Password: 配置的 `GRAFANA_ADMIN_PASSWORD`
+
+**预置仪表盘**:
+- Nginx 性能监控
+- Docker 容器资源
+- 应用健康状态
+
+### 日志聚合（Loki）
+
+查看日志：
+
+```bash
+# 实时日志
+./scripts/deploy.sh logs
+
+# 查看特定服务
+./scripts/deploy.sh logs blog-production
+
+# 查看 Nginx 日志
+docker-compose logs nginx-proxy | grep "error"
+```
+
+日志格式（JSON）:
+
+```json
+{
+  "time_local": "18/Apr/2026:14:30:00 +0800",
+  "remote_addr": "192.168.1.100",
+  "request": "GET / HTTP/2.0",
+  "status": "200",
+  "request_time": "0.052",
+  "environment": "production"
 }
 ```
 
-### 2. 启用 Gzip 压缩
-
-已在 `nginx.conf` 中配置：
-
-```nginx
-gzip on;
-gzip_types text/plain text/css application/json application/javascript text/xml application/xml;
-gzip_min_length 1024;
-```
-
-### 3. 图片优化
-
-```bash
-# 安装 imagemin
-npm install -D imagemin-cli
-
-# 压缩图片
-imagemin docs/public/* --out-dir=docs/public/optimized
-```
-
 ---
 
-## 🐛 故障排查
+## 故障排查
 
-### 问题 1：端口被占用
+### 常见问题
+
+#### 1. 容器启动失败
 
 ```bash
-# 查看端口占用
-sudo lsof -i :8080
+# 查看容器状态
+docker-compose ps
 
-# 停止占用端口的进程
-sudo kill -9 <PID>
+# 查看详细日志
+docker-compose logs blog-production
 
-# 或修改端口
-docker run -p 8081:80 ...
+# 重启服务
+docker-compose restart blog-production
 ```
 
-### 问题 2：构建失败
+#### 2. Nginx 无法访问
 
 ```bash
-# 清理缓存
-rm -rf node_modules package-lock.json docs/.vitepress/cache
+# 检查端口占用
+netstat -tlnp | grep :80
 
-# 重新安装
-npm install
+# 检查 SSL 证书
+openssl x509 -in nginx/ssl/fullchain.pem -text -noout
 
-# 重新构建
-npm run build
+# 测试 Nginx 配置
+docker-compose exec nginx-proxy nginx -t
 ```
 
-### 问题 3：Docker 容器无法启动
+#### 3. 金丝雀发布不生效
 
 ```bash
-# 查看日志
-docker logs nanfeng-blog
+# 检查 Nginx 配置
+cat nginx/conf.d/default.conf | grep canary
+
+# 清除浏览器缓存和 Cookie
+# 或使用无痕模式测试
+
+# 强制指定用户到灰度
+curl -H "Cookie: gray_test=true" https://ainanfeng.cn
+```
+
+#### 4. 健康检查失败
+
+```bash
+# 手动检查健康端点
+curl http://localhost:8082/health
+
+# 查看应用日志
+docker-compose logs blog-production | tail -50
 
 # 进入容器调试
-docker exec -it nanfeng-blog /bin/sh
-
-# 重新创建容器
-docker rm -f nanfeng-blog
-docker run -d --name nanfeng-blog -p 8080:80 nanfeng2021/ainanfeng-blog:latest
+docker-compose exec blog-production sh
 ```
 
-### 问题 4：测试失败
+### 回滚操作
 
 ```bash
-# 查看详细错误
-npx playwright test --reporter=list
+# 回滚到上一个版本
+docker tag nanfeng2021/ainanfeng-blog:previous nanfeng2021/ainanfeng-blog:latest
+docker-compose restart blog-production
 
-# 截图和录像位置
-ls -la playwright-report/
-ls -la test-results/
-
-# 单步调试
-npx playwright test --debug
+# 或者使用 Git 回滚
+git revert HEAD
+git push origin main
 ```
 
 ---
 
-## 📞 获取帮助
+## 高级配置
 
-- **GitHub Issues**: [提交问题](https://github.com/nanfeng2021/blog/issues)
-- **博客首页**: [https://ainanfeng.cn](https://ainanfeng.cn)
-- **文档**: [HARNESS_COMPLIANCE.md](HARNESS_COMPLIANCE.md)
+### 自定义资源限制
 
----
+编辑 `docker-compose.yml`:
 
-## 📝 快速参考卡片
-
-```bash
-# =====================
-# 本地开发
-# =====================
-npm install          # 安装依赖
-npm run dev          # 开发服务器
-npm run build        # 构建
-npm run preview      # 预览
-npm test             # 测试
-
-# =====================
-# Docker 部署
-# =====================
-docker-compose up -d              # 启动
-docker-compose down               # 停止
-docker-compose logs -f            # 日志
-docker-compose restart            # 重启
-
-# =====================
-# 运维脚本
-# =====================
-./scripts/health-check.sh         # 健康检查
-./scripts/backup.sh               # 备份
-./scripts/deploy-docker.sh        # Docker 部署
-
-# =====================
-# 监控
-# =====================
-docker stats                      # 资源使用
-docker logs -f nanfeng-blog       # 日志
-curl http://localhost:8080/health # 健康检查
+```yaml
+services:
+  blog-production:
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'      # 最大 2 核
+          memory: 1G       # 最大 1GB 内存
+        reservations:
+          cpus: '1.0'      # 保证 1 核
+          memory: 512M     # 保证 512MB
 ```
 
+### 多实例部署
+
+```yaml
+services:
+  blog-production:
+    deploy:
+      replicas: 3  # 运行 3 个实例
+      update_config:
+        parallelism: 1     # 每次更新 1 个
+        delay: 10s         # 间隔 10 秒
+```
+
+### 自动扩缩容
+
+需要 Docker Swarm 或 Kubernetes 支持。
+
 ---
 
-**维护者**: 南风  
-**助手**: 旺财 🐕  
-**最后更新**: 2026-04-10  
-**版本**: v1.0.0
+## 安全建议
+
+1. **定期更新**: 保持 Docker 和系统更新
+2. **最小权限**: 容器以非 root 用户运行
+3. **网络安全**: 只暴露必要端口
+4. **日志审计**: 定期检查访问日志
+5. **备份策略**: 定期备份数据和配置
+
+---
+
+## 相关文档
+
+- [Docker 官方文档](https://docs.docker.com/)
+- [Nginx 配置指南](https://nginx.org/en/docs/)
+- [GitHub Actions 文档](https://docs.github.com/en/actions)
+- [Prometheus 监控](https://prometheus.io/docs/)
+
+---
+
+_最后更新：2026-04-18_  
+_维护者：南风 & 旺财 🐕_
